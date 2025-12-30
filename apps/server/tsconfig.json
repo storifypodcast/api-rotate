@@ -1,0 +1,17 @@
+{
+  "extends": "@api_rotate/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["bun-types"],
+    "allowImportingTsExtensions": true,
+    "moduleDetection": "force",
+    "paths": {
+      "~/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}

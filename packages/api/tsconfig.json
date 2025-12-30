@@ -1,0 +1,9 @@
+{
+  "extends": "@api_rotate/tsconfig/compiled-package.json",
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

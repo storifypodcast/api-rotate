@@ -1,0 +1,13 @@
+node_modules
+/apps/web
+/apps/expo
+/packages/api
+/packages/ui
+.git
+.github
+.turbo
+.next
+dist
+*.log
+.env.local
+.env.*.local

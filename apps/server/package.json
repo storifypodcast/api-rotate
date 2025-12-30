@@ -1,0 +1,33 @@
+{
+  "name": "@api_rotate/server",
+  "version": "0.0.1",
+  "description": "Storify API Server - Hono + Bun",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "with-env": "dotenv -e ../../.env --",
+    "dev": "bun with-env bun run --hot src/index.ts",
+    "lint": "eslint .",
+    "start": "bun with-env bun run src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@api_rotate/auth": "workspace:*",
+    "@api_rotate/db": "workspace:*",
+    "@hono/node-server": "^1.13.7",
+    "@hono/zod-validator": "^0.4.1",
+    "@t3-oss/env-core": "catalog:",
+    "hono": "^4.7.11",
+    "pino": "^9.6.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@api_rotate/eslint-config": "workspace:*",
+    "@api_rotate/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "bun-types": "^1.1.38",
+    "eslint": "catalog:",
+    "pino-pretty": "^13.0.0",
+    "typescript": "catalog:"
+  }
+}

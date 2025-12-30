@@ -1,0 +1,9 @@
+{
+  "extends": "@api_rotate/tsconfig/base.json",
+  "include": [
+    "."
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

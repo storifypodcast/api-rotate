@@ -1,0 +1,7 @@
+{
+  "name": "@api_rotate/tsconfig",
+  "private": true,
+  "files": [
+    "*.json"
+  ]
+}
