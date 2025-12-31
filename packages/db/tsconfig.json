@@ -1,8 +1,8 @@
 {
   "extends": "@api_rotate/tsconfig/compiled-package.json",
   "compilerOptions": {
-    "rootDir": "."
+    "rootDir": "src"
   },
-  "include": ["src", "env.ts"],
+  "include": ["src"],
   "exclude": ["node_modules"]
 }
