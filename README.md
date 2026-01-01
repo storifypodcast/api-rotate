@@ -90,8 +90,14 @@ cp .env.example .env
 Edit `.env` with your values:
 
 ```bash
-# Database - update credentials to match docker-compose.yml
-DATABASE_URL="postgresql://user:password@localhost:5432/api_rotate?sslmode=disable"
+# Database - individual vars for Docker Compose
+POSTGRES_USER="user"
+POSTGRES_PASSWORD="your-secure-password"
+POSTGRES_DB="api_rotate"
+
+# Database - full URL for local development (Drizzle, migrations)
+# Build from: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}
+DATABASE_URL="postgresql://user:your-secure-password@localhost:5432/api_rotate"
 
 # Server
 PORT=3001
@@ -123,8 +129,8 @@ Save this key securely - you'll need it for:
 ### Step 5: Initialize Database
 
 ```bash
-# Push schema and create tables
-pnpm db:push
+# Run migrations (creates tables and PostgreSQL functions)
+pnpm -F @api_rotate/db db:migrate
 ```
 
 This creates:

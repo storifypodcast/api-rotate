@@ -1,58 +1,7 @@
--- Multi-tenancy migration: Add user_id to api_key and create service_key table
-
--- ============================================
--- Step 1: Clean up existing data
--- ============================================
-
--- Delete all existing API keys (dev environment fresh start)
-DELETE FROM api_key;
-
--- Drop old indexes that don't include user_id
-DROP INDEX IF EXISTS "api_key_available_idx";
-DROP INDEX IF EXISTS "api_key_type_available_idx";
-
--- ============================================
--- Step 2: Modify api_key table
--- ============================================
-
--- Remove unique constraint on name (will be unique per user now)
-ALTER TABLE api_key DROP CONSTRAINT IF EXISTS api_key_name_unique;
-ALTER TABLE api_key DROP CONSTRAINT IF EXISTS api_key_name_key;
-
--- Add user_id column
-ALTER TABLE api_key ADD COLUMN "user_id" text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE;
-
--- Create new user-scoped indexes
-CREATE INDEX "api_key_user_idx" ON api_key(user_id);
-CREATE INDEX "api_key_user_available_idx" ON api_key(user_id, available_at);
-CREATE INDEX "api_key_user_type_available_idx" ON api_key(user_id, type, available_at);
-
--- ============================================
--- Step 3: Create service_key table
--- ============================================
-
-CREATE TABLE IF NOT EXISTS "service_key" (
-  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "user_id" text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-  "name" text NOT NULL,
-  "key_hash" text NOT NULL,
-  "key_prefix" text NOT NULL,
-  "is_active" boolean NOT NULL DEFAULT true,
-  "last_used_at" timestamptz,
-  "created_at" timestamptz NOT NULL DEFAULT now(),
-  "expires_at" timestamptz,
-  UNIQUE("user_id", "name")
-);
-
-CREATE INDEX "service_key_hash_idx" ON service_key(key_hash);
-CREATE INDEX "service_key_user_idx" ON service_key(user_id);
-
--- ============================================
--- Step 4: Update SQL functions for multi-tenancy
--- ============================================
+-- Custom PostgreSQL functions for API key rotation with multi-tenancy
 
 -- Atomic function: Get first available key (ordered by available_at)
--- Now requires user_id parameter
+-- Requires user_id parameter for multi-tenancy
 CREATE OR REPLACE FUNCTION get_first_available_key(
   user_id_param text,
   type_filter text DEFAULT NULL,
@@ -113,7 +62,7 @@ END;
 $$;
 
 -- Atomic function: Get random available key
--- Now requires user_id parameter
+-- Requires user_id parameter for multi-tenancy
 CREATE OR REPLACE FUNCTION get_random_available_key(
   user_id_param text,
   type_filter text DEFAULT NULL,
@@ -174,7 +123,7 @@ END;
 $$;
 
 -- Function: Report error with exponential backoff
--- Now validates user ownership before update
+-- Validates user ownership before update
 CREATE OR REPLACE FUNCTION report_key_error(
   user_id_param text,
   key_id_param uuid,
