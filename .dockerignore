@@ -26,9 +26,6 @@
 **/*.spec.ts
 **/coverage
 
-# Docker files
-docker/
-
 # Misc
 .DS_Store
 Thumbs.db

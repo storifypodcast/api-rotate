@@ -8,6 +8,6 @@ import { env } from "~/env";
 export const auth = initAuth({
   baseUrl: env.BETTER_AUTH_URL ?? `http://localhost:${env.PORT}`,
   productionUrl: env.BETTER_AUTH_URL ?? `http://localhost:${env.PORT}`,
-  secret: env.BETTER_AUTH_SECRET,
+  secret: env.AUTH_SECRET,
   basePath: "/v1/auth",
 });

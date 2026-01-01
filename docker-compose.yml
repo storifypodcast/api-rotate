@@ -1,8 +1,8 @@
 # API Rotate - Full Stack Docker Compose
 # PostgreSQL + Bun API Server + Next.js Web
-
-# Load environment variables from .env file
-# Usage: docker compose --env-file .env up -d
+#
+# Required environment variables (set in .env):
+#   POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, AUTH_SECRET
 
 services:
   # =============================================================================
@@ -13,15 +13,15 @@ services:
     container_name: api_rotate_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: api_rotate
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d api_rotate"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -38,16 +38,19 @@ services:
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: postgresql://user:password@postgres:5432/api_rotate?sslmode=disable
+      # Database - uses individual vars to construct URL
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB}?sslmode=${POSTGRES_SSL_MODE:-disable}
       PORT: 3001
       NODE_ENV: production
-      AUTH_SECRET: ${AUTH_SECRET:-docker-dev-secret-min-32-chars-here}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-docker-dev-secret-min-32-chars-here}
+      # Authentication
+      AUTH_SECRET: ${AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
-      RESEND_API_KEY: ${RESEND_API_KEY:-re_placeholder_key}
-      EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
-      SKIP_ENV_VALIDATION: "true"
+      # Email (optional - will use placeholder if not set)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      # CORS
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      SKIP_ENV_VALIDATION: "true"
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,11 +73,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://user:password@postgres:5432/api_rotate?sslmode=disable
+      # Database - uses individual vars to construct URL
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB}?sslmode=${POSTGRES_SSL_MODE:-disable}
       PORT: 3000
       NODE_ENV: production
+      # Authentication
       AUTH_SECRET: ${AUTH_SECRET}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
     depends_on:
       postgres:
