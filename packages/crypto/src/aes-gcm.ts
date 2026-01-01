@@ -8,6 +8,21 @@ const KEY_LENGTH = 256;
 const NONCE_LENGTH = 12; // 96 bits, recommended for AES-GCM
 
 /**
+ * Ensures crypto.subtle is available (requires HTTPS or localhost)
+ */
+function requireSecureContext(): void {
+  // crypto.subtle is undefined in non-secure contexts (plain HTTP)
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (!crypto.subtle) {
+    throw new Error(
+      "Web Crypto API is not available. " +
+        "Encryption requires a secure context (HTTPS or localhost). " +
+        "Please access this site over HTTPS.",
+    );
+  }
+}
+
+/**
  * Converts a base64 string to Uint8Array
  */
 function base64ToBytes(base64: string): Uint8Array {
@@ -34,6 +49,7 @@ function bytesToBase64(bytes: Uint8Array): string {
  * Imports a base64-encoded key for use with Web Crypto API
  */
 async function importKey(keyBase64: string): Promise<CryptoKey> {
+  requireSecureContext();
   const keyBytes = base64ToBytes(keyBase64);
   if (keyBytes.length !== 32) {
     throw new Error(
@@ -126,6 +142,7 @@ export async function decrypt(
  * @returns Base64-encoded 256-bit key
  */
 export async function generateEncryptionKey(): Promise<string> {
+  requireSecureContext();
   const key = await crypto.subtle.generateKey(
     { name: ALGORITHM, length: KEY_LENGTH },
     true, // extractable

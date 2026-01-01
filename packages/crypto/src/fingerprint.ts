@@ -4,6 +4,21 @@
  */
 
 /**
+ * Ensures crypto.subtle is available (requires HTTPS or localhost)
+ */
+function requireSecureContext(): void {
+  // crypto.subtle is undefined in non-secure contexts (plain HTTP)
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (!crypto.subtle) {
+    throw new Error(
+      "Web Crypto API is not available. " +
+        "Encryption requires a secure context (HTTPS or localhost). " +
+        "Please access this site over HTTPS.",
+    );
+  }
+}
+
+/**
  * Converts a base64 string to Uint8Array
  */
 function base64ToBytes(base64: string): Uint8Array {
@@ -32,6 +47,7 @@ function bytesToHex(bytes: Uint8Array): string {
 export async function generateKeyFingerprint(
   keyBase64: string,
 ): Promise<string> {
+  requireSecureContext();
   const keyBytes = base64ToBytes(keyBase64);
   const hashBuffer = await crypto.subtle.digest("SHA-256", keyBytes.buffer as ArrayBuffer);
   return bytesToHex(new Uint8Array(hashBuffer));
