@@ -1,6 +1,6 @@
 # API Key Rotation System
 
-A secure API key rotation and management system with **zero-knowledge encryption**. The server never sees or stores your API keys in plaintext - keys are encrypted client-side before storage and decrypted client-side after retrieval.
+A secure API key rotation and management system with **zero-knowledge encryption** and **multi-tenancy**. The server never sees or stores your API keys in plaintext - keys are encrypted client-side before storage and decrypted client-side after retrieval. Each user can only access their own keys.
 
 ## Architecture
 
@@ -9,20 +9,31 @@ A secure API key rotation and management system with **zero-knowledge encryption
 │  Admin Frontend │     │  Backend API    │     │  Client Package │
 │  (Next.js)      │     │  (Hono + Bun)   │     │  (TypeScript)   │
 │                 │     │                 │     │                 │
-│  Has encryption │────▶│  Stores only    │◀────│  Has encryption │
-│  key in memory  │     │  encrypted keys │     │  key in config  │
-│  Encrypts before│     │  Zero-knowledge │     │  Decrypts after │
-│  sending        │     │  storage        │     │  receiving      │
+│  Session auth   │────▶│  Multi-tenant   │◀────│  Service key    │
+│  Has encryption │     │  Stores only    │     │  authentication │
+│  key in memory  │     │  encrypted keys │     │  Has encryption │
+│  Manages keys   │     │  Per-user scope │     │  key in config  │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
+        │                       │                       │
+        └───────────────────────┼───────────────────────┘
+                                │
+                    ┌───────────┼───────────┐
+                    │           │           │
+              ┌─────┴─────┐ ┌───┴────┐ ┌────┴─────┐
+              │   user    │ │api_key │ │service_  │
+              └───────────┘ │+user_id│ │  key     │
+                            └────────┘ └──────────┘
 ```
 
 ## Features
 
 - **Zero-Knowledge Encryption**: AES-GCM 256-bit encryption - server never sees plaintext keys
+- **Multi-Tenancy**: Each user can only see and manage their own API keys
+- **Per-User Service Keys**: Generate unique service keys for programmatic access (replaces global SERVICE_API_KEY)
 - **Atomic Key Selection**: PostgreSQL `FOR UPDATE SKIP LOCKED` prevents race conditions
 - **Exponential Backoff**: Automatic backoff on errors (30s → 60s → 120s → ... → 4h max)
 - **Key Rotation Strategies**: FIFO (first available) or random selection
-- **Admin UI**: Web interface to manage keys with real-time stats
+- **Admin UI**: Web interface to manage keys and service keys with real-time stats
 - **TypeScript SDK**: Easy-to-use client library with auto-decryption
 
 ## Project Structure
@@ -91,9 +102,8 @@ AUTH_SECRET="your-32-char-secret-here"
 BETTER_AUTH_SECRET="your-32-char-secret-here"
 BETTER_AUTH_URL="http://localhost:3000"
 
-# Service Authentication - for Client SDK
-# Generate with: openssl rand -base64 32
-SERVICE_API_KEY="sk_your-service-api-key-here"
+# Note: SERVICE_API_KEY is no longer needed!
+# Service keys are now per-user and managed via the Admin UI.
 ```
 
 ### Step 4: Generate Encryption Key
@@ -117,7 +127,8 @@ pnpm db:push
 ```
 
 This creates:
-- `api_key` table
+- `api_key` table (with per-user scoping)
+- `service_key` table (per-user service keys for API access)
 - `user`, `session`, `account`, `verification` tables (Better Auth)
 - PostgreSQL functions for atomic key operations
 
@@ -138,8 +149,10 @@ pnpm dev:web      # Frontend on http://localhost:3000
 
 1. Open http://localhost:3000/admin/keys
 2. Sign in with email OTP (check server logs for OTP code in development)
-3. Enter your encryption key to "Unlock Vault"
-4. Add, pause, resume, or delete API keys
+3. **Generate a Service Key**: Click "Generate Service Key" to create a key for API access
+4. **Copy the service key immediately** - it won't be shown again!
+5. Enter your encryption key to "Unlock Vault"
+6. Add, pause, resume, or delete API keys
 
 ### Client SDK
 
@@ -150,7 +163,8 @@ import { ApiKeyClient } from '@api_rotate/client';
 
 const client = new ApiKeyClient({
   baseUrl: 'http://localhost:3001',
-  serviceKey: process.env.SERVICE_API_KEY,
+  // Use your per-user service key (generated in Admin UI)
+  serviceKey: process.env.MY_SERVICE_KEY, // e.g., sk_live_abc123...
   encryptionKey: process.env.ENCRYPTION_KEY,
 });
 
@@ -183,7 +197,7 @@ const response = await client.withKey(async (apiKey, keyId) => {
 
 ## API Endpoints
 
-### Service Endpoints (Requires `SERVICE_API_KEY`)
+### Service Endpoints (Requires User Service Key)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -191,16 +205,29 @@ const response = await client.withKey(async (apiKey, keyId) => {
 | GET | `/v1/keys/random` | Get random available key |
 | POST | `/v1/keys/report-error` | Report error (triggers backoff) |
 
+**Authentication:**
+```
+Authorization: Bearer sk_live_your_service_key_here
+```
+
 **Query Parameters:**
 - `type` (optional): Filter by key type (e.g., "openai", "anthropic")
 - `cooldownSeconds` (optional): Override cooldown (1-14400 seconds)
+
+### Service Key Management (Requires Better Auth session)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/v1/service-keys` | List your service keys |
+| POST | `/v1/service-keys` | Generate new service key |
+| DELETE | `/v1/service-keys/:id` | Revoke service key |
 
 ### Admin Endpoints (Requires Better Auth session)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/v1/keys` | List all keys (without encrypted values) |
-| GET | `/v1/keys/stats` | Get aggregated statistics |
+| GET | `/v1/keys` | List your keys (without encrypted values) |
+| GET | `/v1/keys/stats` | Get your aggregated statistics |
 | POST | `/v1/keys` | Create new key |
 | PATCH | `/v1/keys/:id` | Update key (name, type, isActive) |
 | DELETE | `/v1/keys/:id` | Delete key |
@@ -211,8 +238,14 @@ const response = await client.withKey(async (apiKey, keyId) => {
 
 | Mode | Use Case | Mechanism |
 |------|----------|-----------|
-| **Service Key** | Client apps (programmatic) | Bearer token: `SERVICE_API_KEY` |
+| **Service Key** | Client apps (programmatic) | Bearer token: per-user `sk_live_...` key |
 | **Better Auth** | Admin UI (human users) | Session-based with email OTP |
+
+### Multi-Tenancy
+
+- Each user's API keys are isolated - users can only access their own keys
+- Service keys are per-user and scoped to that user's API keys
+- Revoking a service key immediately blocks access
 
 ### Zero-Knowledge Architecture
 
@@ -285,6 +318,12 @@ In development, OTP codes are logged to the server console:
 - Ensure the key is exactly 32 bytes when base64 decoded
 - Use the same key for Admin UI and Client SDK
 - Keys encrypted with one key cannot be decrypted with another
+
+### Service key issues
+
+- Service keys start with `sk_live_` prefix
+- If a service key doesn't work, generate a new one in the Admin UI
+- Each user needs their own service key - keys cannot be shared between users
 
 ## License
 

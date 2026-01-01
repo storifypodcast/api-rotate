@@ -9,13 +9,20 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import { user } from "../auth/user";
+
 export const apiKey = pgTable(
   "api_key",
   {
     id: uuid("id").notNull().primaryKey().defaultRandom(),
 
+    // Owner
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+
     // Key identification
-    name: text("name").notNull().unique(),
+    name: text("name").notNull(),
     encryptedKey: text("encrypted_key").notNull(), // AES-GCM encrypted, base64 encoded
     type: text("type"), // Optional categorization (e.g., "openai", "anthropic", "gemini")
 
@@ -47,8 +54,13 @@ export const apiKey = pgTable(
       .notNull(),
   },
   (table) => [
-    // Index for efficient key selection queries
-    index("api_key_available_idx").on(table.availableAt),
-    index("api_key_type_available_idx").on(table.type, table.availableAt),
+    // Index for efficient key selection queries (user-scoped)
+    index("api_key_user_idx").on(table.userId),
+    index("api_key_user_available_idx").on(table.userId, table.availableAt),
+    index("api_key_user_type_available_idx").on(
+      table.userId,
+      table.type,
+      table.availableAt,
+    ),
   ],
 );

@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 
 import { reportErrorSchema } from "@api_rotate/db";
+import type { ServiceAuthVariables } from "~/libs/middlewares";
 import { errorResponse, successResponse } from "~/libs/utils/response";
 
 import { keyService } from "./service";
@@ -9,7 +10,10 @@ import { keyService } from "./service";
  * POST /keys/report-error - Report key error (triggers exponential backoff)
  * Service auth required
  */
-export async function reportError(c: Context) {
+export async function reportError(
+  c: Context<{ Variables: ServiceAuthVariables }>,
+) {
+  const userId = c.get("userId");
   const body: unknown = await c.req.json();
 
   const parsed = reportErrorSchema.safeParse(body);
@@ -19,6 +23,7 @@ export async function reportError(c: Context) {
   }
 
   const success = await keyService.reportError(
+    userId,
     parsed.data.keyId,
     parsed.data.errorMessage,
   );

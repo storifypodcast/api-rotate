@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 
 import { getKeyOptionsSchema } from "@api_rotate/db";
+import type { ServiceAuthVariables } from "~/libs/middlewares";
 import { errorResponse, successResponse } from "~/libs/utils/response";
 
 import { keyService } from "./service";
@@ -9,7 +10,10 @@ import { keyService } from "./service";
  * GET /keys/next - Get first available key (FIFO)
  * Service auth required
  */
-export async function getNextKey(c: Context) {
+export async function getNextKey(
+  c: Context<{ Variables: ServiceAuthVariables }>,
+) {
+  const userId = c.get("userId");
   const query = c.req.query();
 
   const parsed = getKeyOptionsSchema.safeParse({
@@ -24,6 +28,7 @@ export async function getNextKey(c: Context) {
   }
 
   const key = await keyService.getFirstAvailableKey(
+    userId,
     parsed.data.type,
     parsed.data.cooldownSeconds,
   );

@@ -1,16 +1,34 @@
+import { createHash } from "crypto";
 import type { Context, Next } from "hono";
 import { HTTPException } from "hono/http-exception";
 
-import { env } from "~/env";
+import { db, eq, serviceKey } from "@api_rotate/db";
+
 import { createLogger } from "~/libs/utils/logger";
 
 const log = createLogger("ServiceAuthMiddleware");
 
+export interface ServiceAuthVariables {
+  userId: string;
+  serviceKeyId: string;
+}
+
 /**
- * Service API Key authentication middleware
- * Validates Bearer token against SERVICE_API_KEY for programmatic access
+ * Hash a service key using SHA-256
  */
-export async function serviceAuthMiddleware(c: Context, next: Next) {
+function hashServiceKey(key: string): string {
+  return createHash("sha256").update(key).digest("hex");
+}
+
+/**
+ * Service Key authentication middleware
+ * Validates Bearer token by looking up hashed key in database
+ * Sets userId and serviceKeyId in context
+ */
+export async function serviceAuthMiddleware(
+  c: Context<{ Variables: ServiceAuthVariables }>,
+  next: Next,
+) {
   const authHeader = c.req.header("Authorization");
 
   if (!authHeader) {
@@ -27,15 +45,52 @@ export async function serviceAuthMiddleware(c: Context, next: Next) {
     });
   }
 
-  const token = authHeader.slice(7);
+  const key = authHeader.slice(7);
+  const keyHash = hashServiceKey(key);
 
-  if (token !== env.SERVICE_API_KEY) {
-    log.warn("Invalid service API key");
+  // Lookup service key in database
+  const foundKey = await db.query.serviceKey.findFirst({
+    where: eq(serviceKey.keyHash, keyHash),
+  });
+
+  if (!foundKey) {
+    log.warn("Invalid service key");
     throw new HTTPException(401, {
-      message: "Unauthorized - Invalid API key",
+      message: "Unauthorized - Invalid service key",
     });
   }
 
-  log.debug("Service authenticated");
+  // Check if key is active
+  if (!foundKey.isActive) {
+    log.warn({ keyId: foundKey.id }, "Service key is inactive");
+    throw new HTTPException(401, {
+      message: "Unauthorized - Service key is inactive",
+    });
+  }
+
+  // Check expiration
+  if (foundKey.expiresAt && foundKey.expiresAt < new Date()) {
+    log.warn({ keyId: foundKey.id }, "Service key has expired");
+    throw new HTTPException(401, {
+      message: "Unauthorized - Service key has expired",
+    });
+  }
+
+  // Update last used timestamp (fire-and-forget, don't block request)
+  db.update(serviceKey)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(serviceKey.id, foundKey.id))
+    .then(() => {
+      log.debug({ keyId: foundKey.id }, "Updated service key last used");
+    })
+    .catch((err) => {
+      log.error({ keyId: foundKey.id, error: err }, "Failed to update last used");
+    });
+
+  // Set user context
+  c.set("userId", foundKey.userId);
+  c.set("serviceKeyId", foundKey.id);
+
+  log.debug({ userId: foundKey.userId, keyId: foundKey.id }, "Service authenticated");
   await next();
 }

@@ -11,6 +11,7 @@ import {
   EncryptionUnlock,
   KeyList,
   KeyStats,
+  ServiceKeyList,
   useEncryption,
 } from "./_components";
 
@@ -74,6 +75,13 @@ export default function AdminKeysPage() {
           Manage your encrypted API keys with zero-knowledge security.
         </p>
       </div>
+
+      {/* Service Keys section - no encryption needed */}
+      <div className="mb-8">
+        <ServiceKeyList />
+      </div>
+
+      <hr className="my-8" />
 
       <EncryptionProvider>
         <KeysContent />

@@ -2,11 +2,17 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
 import { apiKey } from "./api-key";
+import { serviceKey } from "./service-key";
+
+// ============================================
+// API Key Schemas
+// ============================================
 
 // Select schema (for reading)
 export const selectApiKeySchema = createSelectSchema(apiKey);
 
 // Insert schema (for creating new keys)
+// Note: userId is omitted because it's set by the server from authenticated user
 export const insertApiKeySchema = createInsertSchema(apiKey, {
   name: (schema) => schema.min(1).max(100),
   encryptedKey: (schema) => schema.min(1), // Already encrypted by client
@@ -14,6 +20,7 @@ export const insertApiKeySchema = createInsertSchema(apiKey, {
   defaultCooldown: (schema) => schema.min(1).max(14400).default(30),
 }).omit({
   id: true,
+  userId: true, // Set by server from authenticated user
   availableAt: true,
   lastUsedAt: true,
   useCount: true,
@@ -45,9 +52,29 @@ export const reportErrorSchema = z.object({
   errorMessage: z.string().max(500).optional(),
 });
 
+// ============================================
+// Service Key Schemas
+// ============================================
+
+// Select schema (for reading)
+export const selectServiceKeySchema = createSelectSchema(serviceKey);
+
+// Create service key schema (input from user)
+export const createServiceKeySchema = z.object({
+  name: z.string().min(1).max(100),
+});
+
+// ============================================
 // Types
+// ============================================
+
+// API Key types
 export type ApiKey = z.infer<typeof selectApiKeySchema>;
 export type NewApiKey = z.infer<typeof insertApiKeySchema>;
 export type UpdateApiKey = z.infer<typeof updateApiKeySchema>;
 export type GetKeyOptions = z.infer<typeof getKeyOptionsSchema>;
 export type ReportError = z.infer<typeof reportErrorSchema>;
+
+// Service Key types
+export type ServiceKey = z.infer<typeof selectServiceKeySchema>;
+export type CreateServiceKey = z.infer<typeof createServiceKeySchema>;

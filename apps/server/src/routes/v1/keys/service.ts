@@ -1,5 +1,5 @@
 import type { ApiKey, NewApiKey, UpdateApiKey } from "@api_rotate/db";
-import { apiKey, db, eq, sql } from "@api_rotate/db";
+import { and, apiKey, db, eq, sql } from "@api_rotate/db";
 
 interface AvailableKey {
   keyId: string;
@@ -16,13 +16,15 @@ interface KeyStats {
 }
 
 /**
- * Key rotation service using atomic PostgreSQL functions
+ * Key rotation service using atomic PostgreSQL functions.
+ * All methods are user-scoped for multi-tenancy.
  */
 export class KeyService {
   /**
    * Get first available key (FIFO order by available_at)
    */
   async getFirstAvailableKey(
+    userId: string,
     typeFilter?: string,
     cooldownSeconds?: number,
   ): Promise<AvailableKey | null> {
@@ -31,7 +33,7 @@ export class KeyService {
       encrypted_key: string;
       key_type: string | null;
     }>(
-      sql`SELECT * FROM get_first_available_key(${typeFilter ?? null}, ${cooldownSeconds ?? null})`,
+      sql`SELECT * FROM get_first_available_key(${userId}, ${typeFilter ?? null}, ${cooldownSeconds ?? null})`,
     );
 
     if (result.length === 0) {
@@ -54,6 +56,7 @@ export class KeyService {
    * Get random available key
    */
   async getRandomAvailableKey(
+    userId: string,
     typeFilter?: string,
     cooldownSeconds?: number,
   ): Promise<AvailableKey | null> {
@@ -62,7 +65,7 @@ export class KeyService {
       encrypted_key: string;
       key_type: string | null;
     }>(
-      sql`SELECT * FROM get_random_available_key(${typeFilter ?? null}, ${cooldownSeconds ?? null})`,
+      sql`SELECT * FROM get_random_available_key(${userId}, ${typeFilter ?? null}, ${cooldownSeconds ?? null})`,
     );
 
     if (result.length === 0) {
@@ -85,11 +88,12 @@ export class KeyService {
    * Report key error with exponential backoff
    */
   async reportError(
+    userId: string,
     keyId: string,
     errorMessage?: string,
   ): Promise<boolean> {
     const result = await db.execute<{ report_key_error: boolean }>(
-      sql`SELECT report_key_error(${keyId}::uuid, ${errorMessage ?? null})`,
+      sql`SELECT report_key_error(${userId}, ${keyId}::uuid, ${errorMessage ?? null})`,
     );
 
     const row = result[0];
@@ -97,16 +101,16 @@ export class KeyService {
   }
 
   /**
-   * Get aggregated key statistics
+   * Get aggregated key statistics for a user
    */
-  async getStats(): Promise<KeyStats> {
+  async getStats(userId: string): Promise<KeyStats> {
     const result = await db.execute<{
       total_keys: string;
       active_keys: string;
       available_now: string;
       total_uses: string;
       total_errors: string;
-    }>(sql`SELECT * FROM get_api_key_stats()`);
+    }>(sql`SELECT * FROM get_api_key_stats(${userId})`);
 
     const row = result[0];
     if (!row) {
@@ -129,13 +133,14 @@ export class KeyService {
   }
 
   /**
-   * List all keys (without encrypted values for security)
+   * List all keys for a user (without encrypted values for security)
    */
-  async listKeys(): Promise<Omit<ApiKey, "encryptedKey">[]> {
+  async listKeys(userId: string): Promise<Omit<ApiKey, "encryptedKey">[]> {
     const keys = await db.query.apiKey.findMany({
       columns: {
         encryptedKey: false,
       },
+      where: eq(apiKey.userId, userId),
       orderBy: (table, { desc }) => [desc(table.createdAt)],
     });
 
@@ -143,24 +148,30 @@ export class KeyService {
   }
 
   /**
-   * Get key by ID (without encrypted value)
+   * Get key by ID (validates ownership)
    */
-  async getKeyById(id: string): Promise<Omit<ApiKey, "encryptedKey"> | null> {
+  async getKeyById(
+    userId: string,
+    id: string,
+  ): Promise<Omit<ApiKey, "encryptedKey"> | null> {
     const key = await db.query.apiKey.findFirst({
       columns: {
         encryptedKey: false,
       },
-      where: eq(apiKey.id, id),
+      where: and(eq(apiKey.id, id), eq(apiKey.userId, userId)),
     });
 
     return key ?? null;
   }
 
   /**
-   * Create a new key
+   * Create a new key for a user
    */
-  async createKey(data: NewApiKey): Promise<ApiKey> {
-    const [newKey] = await db.insert(apiKey).values(data).returning();
+  async createKey(userId: string, data: NewApiKey): Promise<ApiKey> {
+    const [newKey] = await db
+      .insert(apiKey)
+      .values({ ...data, userId })
+      .returning();
 
     if (!newKey) {
       throw new Error("Failed to create key");
@@ -170,18 +181,20 @@ export class KeyService {
   }
 
   /**
-   * Update an existing key
+   * Update an existing key (validates ownership)
    */
   async updateKey(
+    userId: string,
     id: string,
     data: UpdateApiKey,
   ): Promise<Omit<ApiKey, "encryptedKey"> | null> {
     const [updated] = await db
       .update(apiKey)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(apiKey.id, id))
+      .where(and(eq(apiKey.id, id), eq(apiKey.userId, userId)))
       .returning({
         id: apiKey.id,
+        userId: apiKey.userId,
         name: apiKey.name,
         type: apiKey.type,
         defaultCooldown: apiKey.defaultCooldown,
@@ -201,10 +214,13 @@ export class KeyService {
   }
 
   /**
-   * Delete a key
+   * Delete a key (validates ownership)
    */
-  async deleteKey(id: string): Promise<boolean> {
-    const result = await db.delete(apiKey).where(eq(apiKey.id, id)).returning();
+  async deleteKey(userId: string, id: string): Promise<boolean> {
+    const result = await db
+      .delete(apiKey)
+      .where(and(eq(apiKey.id, id), eq(apiKey.userId, userId)))
+      .returning();
 
     return result.length > 0;
   }

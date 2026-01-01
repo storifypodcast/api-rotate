@@ -8,7 +8,6 @@ export const env = createEnv({
     PORT: z.coerce.number().int().positive(),
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: z.string().url().optional(),
-    SERVICE_API_KEY: z.string().min(16),
   },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
@@ -16,7 +15,6 @@ export const env = createEnv({
     PORT: process.env.PORT,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-    SERVICE_API_KEY: process.env.SERVICE_API_KEY,
   },
   skipValidation:
     !!process.env.CI ||
