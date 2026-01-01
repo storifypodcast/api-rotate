@@ -12,8 +12,38 @@ const log = createLogger("Server");
 
 const app = new Hono();
 
+/**
+ * Allowed origins for CORS
+ * Configure via CORS_ORIGINS env variable (comma-separated)
+ */
+const ALLOWED_ORIGINS = env.CORS_ORIGINS;
+
+/**
+ * Check if origin is allowed
+ */
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+
+  // Check exact matches from environment
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+
+  // Development mode: allow localhost
+  if (env.NODE_ENV === "development") {
+    const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+    if (localhostPattern.test(origin)) return true;
+  }
+
+  return false;
+}
+
 // Global middlewares
-app.use("*", cors());
+app.use(
+  "*",
+  cors({
+    origin: (origin) => (isAllowedOrigin(origin) ? origin : ""),
+    credentials: true,
+  }),
+);
 app.use("*", loggingMiddleware);
 
 // Better Auth handler

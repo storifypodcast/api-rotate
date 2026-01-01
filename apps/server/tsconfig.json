@@ -8,6 +8,7 @@
     "types": ["bun-types"],
     "allowImportingTsExtensions": true,
     "moduleDetection": "force",
+    "jsx": "react-jsx",
     "paths": {
       "~/*": ["./src/*"]
     }

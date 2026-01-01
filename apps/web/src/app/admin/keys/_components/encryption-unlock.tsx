@@ -31,9 +31,15 @@ export function EncryptionUnlock() {
         return;
       }
 
-      // Validate it looks like a base64 key (32 bytes = 44 chars in base64)
-      if (key.length < 20) {
-        toast.error("Invalid encryption key format");
+      // Validate base64 format and decoded length (32 bytes for AES-256)
+      try {
+        const decoded = atob(key.trim());
+        if (decoded.length !== 32) {
+          toast.error("Invalid key: must be exactly 32 bytes when decoded");
+          return;
+        }
+      } catch {
+        toast.error("Invalid key: must be valid base64");
         return;
       }
 

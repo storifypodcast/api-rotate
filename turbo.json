@@ -51,7 +51,10 @@
     "BETTER_AUTH_SECRET",
     "BACKEND_URL",
     "PORT",
-    "SERVICE_API_KEY"
+    "SERVICE_API_KEY",
+    "CORS_ORIGINS",
+    "RESEND_API_KEY",
+    "EMAIL_FROM"
   ],
   "globalPassThroughEnv": [
     "NODE_ENV",

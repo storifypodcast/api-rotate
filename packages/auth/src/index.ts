@@ -5,6 +5,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 
 import { db } from "@api_rotate/db/client";
+import { emailClient } from "@api_rotate/emails/client";
 
 export function initAuth<
   TExtraPlugins extends BetterAuthPlugin[] = [],
@@ -29,10 +30,13 @@ export function initAuth<
     plugins: [
       emailOTP({
         sendVerificationOTP: async ({ email, otp, type }) => {
-          console.log(`[Email OTP] Sending ${type} code to ${email}: ${otp}`);
-          // TODO: Implement actual email sending
-          // Example with Resend, Nodemailer, etc.
-          await Promise.resolve();
+          const result = await emailClient.sendOTPEmail({ email, otp, type });
+          if (!result.success) {
+            console.error(
+              `[Auth] Failed to send OTP email to ${email}:`,
+              result.error,
+            );
+          }
         },
         otpLength: 6,
         expiresIn: 300, // 5 minutes
