@@ -49,6 +49,7 @@
     "AUTH_SECRET",
     "BETTER_AUTH_URL",
     "BETTER_AUTH_SECRET",
+    "BACKEND_URL",
     "PORT",
     "SERVICE_API_KEY"
   ],

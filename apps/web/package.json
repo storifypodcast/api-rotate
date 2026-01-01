@@ -15,6 +15,7 @@
   "dependencies": {
     "@api_rotate/api": "workspace:*",
     "@api_rotate/auth": "workspace:*",
+    "@api_rotate/crypto": "workspace:*",
     "@api_rotate/db": "workspace:*",
     "@api_rotate/ui": "workspace:*",
     "@t3-oss/env-nextjs": "catalog:",

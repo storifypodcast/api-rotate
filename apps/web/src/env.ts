@@ -13,6 +13,7 @@ export const env = createEnv({
   },
   server: {
     BETTER_AUTH_URL: z.string().url().optional(),
+    BACKEND_URL: z.string().url().default("http://localhost:3001"),
   },
   client: {},
   experimental__runtimeEnv: {
