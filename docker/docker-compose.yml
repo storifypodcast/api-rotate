@@ -1,18 +1,18 @@
 services:
   postgres:
     image: postgres:16
-    container_name: storify-db
+    container_name: api_rotate_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: storify
-      POSTGRES_PASSWORD: storify
-      POSTGRES_DB: storify
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: api_rotate
     ports:
-      - "5454:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U storify"]
+      test: ["CMD-SHELL", "pg_isready -U user -d api_rotate"]
       interval: 10s
       timeout: 5s
       retries: 5

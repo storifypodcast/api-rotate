@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -45,8 +44,7 @@ export const apiKey = pgTable(
       .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
-      .notNull()
-      .$onUpdateFn(() => sql`now()`),
+      .notNull(),
   },
   (table) => [
     // Index for efficient key selection queries

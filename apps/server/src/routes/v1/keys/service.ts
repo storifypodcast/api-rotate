@@ -178,7 +178,7 @@ export class KeyService {
   ): Promise<Omit<ApiKey, "encryptedKey"> | null> {
     const [updated] = await db
       .update(apiKey)
-      .set(data)
+      .set({ ...data, updatedAt: new Date() })
       .where(eq(apiKey.id, id))
       .returning({
         id: apiKey.id,
