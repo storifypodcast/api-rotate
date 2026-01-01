@@ -16,8 +16,8 @@ export const metadata: Metadata = {
       ? env.BETTER_AUTH_URL ?? "http://localhost:3000"
       : "http://localhost:3000",
   ),
-  title: "Storify",
-  description: "Storify App",
+  title: "API Rotate",
+  description: "API Key Rotation and Management System",
 };
 
 export const viewport: Viewport = {

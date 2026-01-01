@@ -40,7 +40,7 @@ export function initAuth<
       expo(),
       ...(options.extraPlugins ?? []),
     ],
-    trustedOrigins: ["expo://", "storify://"],
+    trustedOrigins: [],
     onAPIError: {
       onError(error, ctx) {
         console.error("BETTER AUTH API ERROR", error, ctx);

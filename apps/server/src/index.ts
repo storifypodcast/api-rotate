@@ -25,7 +25,7 @@ app.route("/v1", v1Router);
 // Health check
 app.get("/", (c) => {
   return c.json({
-    name: "Storify Server",
+    name: "API Rotate Server",
     version: "1.0.0",
     status: "ok",
   });

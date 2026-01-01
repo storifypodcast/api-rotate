@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.11
-# Storify Server - Hono + Bun
+# API Rotate Server - Hono + Bun
 
 # Stage 1: Build
 FROM oven/bun:1.1.38 AS build

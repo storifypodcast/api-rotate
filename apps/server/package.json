@@ -1,7 +1,7 @@
 {
   "name": "@api_rotate/server",
   "version": "0.0.1",
-  "description": "Storify API Server - Hono + Bun",
+  "description": "API Rotate Server - Hono + Bun",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
