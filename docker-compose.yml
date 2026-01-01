@@ -1,0 +1,98 @@
+# API Rotate - Full Stack Docker Compose
+# PostgreSQL + Bun API Server + Next.js Web
+
+# Load environment variables from .env file
+# Usage: docker compose --env-file .env up -d
+
+services:
+  # =============================================================================
+  # PostgreSQL Database
+  # =============================================================================
+  postgres:
+    image: postgres:16
+    container_name: api_rotate_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: api_rotate
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d api_rotate"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # =============================================================================
+  # API Server (Bun/Hono)
+  # =============================================================================
+  api:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: api_rotate_api
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/api_rotate?sslmode=disable
+      PORT: 3001
+      NODE_ENV: production
+      AUTH_SECRET: ${AUTH_SECRET:-docker-dev-secret-min-32-chars-here}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-docker-dev-secret-min-32-chars-here}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      RESEND_API_KEY: ${RESEND_API_KEY:-re_placeholder_key}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
+      SKIP_ENV_VALIDATION: "true"
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # =============================================================================
+  # Web App (Next.js)
+  # =============================================================================
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: api_rotate_web
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/api_rotate?sslmode=disable
+      PORT: 3000
+      NODE_ENV: production
+      AUTH_SECRET: ${AUTH_SECRET}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: api_rotate_network

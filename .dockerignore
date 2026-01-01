@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+
+# Build outputs (these will be regenerated)
+**/.next
+**/.turbo
+**/.cache
+**/dist
+
+# Dev files
+*.log
+
+# Environment (use docker-compose environment instead)
+.env
+.env.local
+.env.*.local
+
+# Tests
+**/*.test.ts
+**/*.spec.ts
+**/coverage
+
+# Docker files
+docker/
+
+# Misc
+.DS_Store
+Thumbs.db
+*.tar
+*.zip
