@@ -9,12 +9,12 @@
  * Run with: bun sample-client.ts
  */
 
-import { ApiKeyClient, NoKeysAvailableError, ApiKeyError, DecryptionError } from "./packages/client/src/index";
+import { ApiKeyClient, ApiKeyError, DecryptionError, NoKeysAvailableError } from "./packages/client/src/index";
 
 // Replace with your values from the Admin UI
 const SERVICE_KEY = process.env.SERVICE_API_KEY || "sk_live_your_service_key_here";
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "your_base64_encryption_key_here";
-const BASE_URL = process.env.API_BASE_URL || "http://localhost:3001";
+const BASE_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
 async function main() {
   console.log("🧪 Testing API Key Client SDK with Multi-Tenancy\n");
