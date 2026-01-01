@@ -9,7 +9,7 @@
  * Run with: bun sample-client.ts
  */
 
-import { ApiKeyClient, NoKeysAvailableError, ApiKeyError } from "./packages/client/src/index";
+import { ApiKeyClient, NoKeysAvailableError, ApiKeyError, DecryptionError } from "./packages/client/src/index";
 
 // Replace with your values from the Admin UI
 const SERVICE_KEY = process.env.SERVICE_API_KEY || "sk_live_your_service_key_here";
@@ -42,6 +42,9 @@ async function main() {
   } catch (error) {
     if (error instanceof NoKeysAvailableError) {
       console.log("  ⚠️ No keys available (key on cooldown - expected after first use)\n");
+    } else if (error instanceof DecryptionError) {
+      console.log(`  ❌ Decryption failed: ${error.message}\n`);
+      console.log("     This means the encryption key doesn't match the one used to encrypt the stored key.\n");
     } else if (error instanceof ApiKeyError) {
       console.log(`  ❌ API Error: ${error.message} (code: ${error.code})\n`);
     } else {
@@ -57,6 +60,8 @@ async function main() {
   } catch (error) {
     if (error instanceof NoKeysAvailableError) {
       console.log("  ✅ Correctly returned 'No keys available' (cooldown active)\n");
+    } else if (error instanceof DecryptionError) {
+      console.log(`  ⚠️ Decryption failed (encryption key mismatch)\n`);
     } else {
       throw error;
     }
@@ -72,6 +77,8 @@ async function main() {
   } catch (error) {
     if (error instanceof NoKeysAvailableError) {
       console.log("  ✅ Correctly caught NoKeysAvailableError in withKey\n");
+    } else if (error instanceof DecryptionError) {
+      console.log(`  ⚠️ Decryption failed (encryption key mismatch)\n`);
     } else {
       throw error;
     }

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { showRoutes } from "hono/dev";
+import { HTTPException } from "hono/http-exception";
 
 import { env } from "./env";
 import { auth } from "./libs/auth";
@@ -11,6 +12,35 @@ import { v1Router } from "./routes/v1";
 const log = createLogger("Server");
 
 const app = new Hono();
+
+// Global error handler - format all errors consistently
+app.onError((err, c) => {
+  if (err instanceof HTTPException) {
+    const status = err.status;
+    return c.json(
+      {
+        success: false,
+        error: {
+          message: err.message,
+          code: `HTTP_${status}`,
+        },
+      },
+      status,
+    );
+  }
+
+  log.error({ error: err }, "Unhandled error");
+  return c.json(
+    {
+      success: false,
+      error: {
+        message: "Internal server error",
+        code: "INTERNAL_ERROR",
+      },
+    },
+    500,
+  );
+});
 
 /**
  * Allowed origins for CORS
