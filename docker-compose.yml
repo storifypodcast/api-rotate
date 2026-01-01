@@ -51,8 +51,7 @@ services:
       # CORS
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/v1/health"]
@@ -82,10 +81,8 @@ services:
       # Backend API URL (container name in Docker, localhost for local dev)
       BACKEND_URL: ${BACKEND_URL:-http://api:3001}
     depends_on:
-      postgres:
-        condition: service_healthy
-      api:
-        condition: service_healthy
+      - postgres
+      - api
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3000"]
