@@ -17,6 +17,8 @@ export interface SendEmailOptions {
   subject: string;
   react: ReactElement;
   from?: string;
+  /** OTP code to log in dev mode (when no RESEND_API_KEY) */
+  otp?: string;
 }
 
 export interface SendEmailResult {
@@ -37,6 +39,7 @@ export async function sendEmail(
     subject,
     react,
     from = env.EMAIL_FROM ?? DEFAULT_FROM,
+    otp,
   } = options;
 
   // In development without API key, just log
@@ -45,6 +48,9 @@ export async function sendEmail(
     console.log(`  To: ${Array.isArray(to) ? to.join(", ") : to}`);
     console.log(`  Subject: ${subject}`);
     console.log(`  From: ${from}`);
+    if (otp) {
+      console.log(`  OTP: ${otp}`);
+    }
     return { success: true, id: "dev-mode" };
   }
 

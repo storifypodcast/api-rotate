@@ -49,9 +49,15 @@ const globalForDb = globalThis as unknown as {
   db: ReturnType<typeof createClient> | undefined;
 };
 
-export const db = globalForDb.db ?? createClient();
+// Skip db creation during build (SKIP_ENV_VALIDATION is set in Docker build)
+const shouldSkipDb =
+  !!process.env.SKIP_ENV_VALIDATION || !!process.env.CI;
 
-if (process.env.NODE_ENV !== "production") {
+export const db = shouldSkipDb
+  ? (undefined as unknown as ReturnType<typeof createClient>)
+  : (globalForDb.db ?? createClient());
+
+if (process.env.NODE_ENV !== "production" && !shouldSkipDb) {
   globalForDb.db = db;
 }
 

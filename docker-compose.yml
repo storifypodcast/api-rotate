@@ -50,7 +50,6 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-}
       # CORS
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
-      SKIP_ENV_VALIDATION: "true"
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,6 +79,8 @@ services:
       # Authentication
       AUTH_SECRET: ${AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      # Backend API URL (container name in Docker, localhost for local dev)
+      BACKEND_URL: ${BACKEND_URL:-http://api:3001}
     depends_on:
       postgres:
         condition: service_healthy

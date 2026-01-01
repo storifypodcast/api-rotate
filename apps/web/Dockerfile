@@ -19,7 +19,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 FROM base AS build
 WORKDIR /app
 ENV NODE_ENV=production
-ENV SKIP_ENV_VALIDATION=false
+ENV SKIP_ENV_VALIDATION=true
 
 # # Build-time environment variables (placeholder values for build)
 # ENV DATABASE_URL="postgresql://placeholder:placeholder@placeholder:5432/placeholder"
@@ -30,10 +30,10 @@ ENV SKIP_ENV_VALIDATION=false
 # Copy everything from deps (including node_modules)
 COPY --from=deps /app ./
 
-# Build the packages first, then web
+# Build the packages first, then web (run next build directly, not with-env)
 RUN pnpm -F @api_rotate/db build && \
     pnpm -F @api_rotate/crypto build && \
-    pnpm -F @api_rotate/web build
+    cd apps/web && pnpm next build
 
 # Fix permissions for node user
 RUN chown -R node:node /app

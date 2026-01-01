@@ -22,6 +22,7 @@ export class EmailClient {
       to: email,
       subject: content.subject,
       react: OTPVerificationEmail({ otp, type }),
+      otp,
     });
   }
 }
