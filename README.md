@@ -48,7 +48,8 @@ api_rotate/
 │   ├── crypto/              # AES-GCM encryption utilities
 │   ├── client/              # TypeScript client SDK
 │   └── auth/                # Better Auth configuration
-└── docker/                  # Docker compose for PostgreSQL
+├── docker/                  # Docker compose for PostgreSQL
+└── sample-client.ts         # Example client SDK usage
 ```
 
 ## Prerequisites
@@ -193,6 +194,48 @@ const response = await client.withKey(async (apiKey, keyId) => {
     // ... rest of request
   });
 }, { type: 'openai' });
+```
+
+### Running the Sample Client
+
+A sample client script is included to demonstrate the SDK functionality:
+
+```bash
+# 1. Start the server
+pnpm dev:server
+
+# 2. Set environment variables (or edit sample-client.ts directly)
+export SERVICE_KEY="sk_live_your_service_key_here"
+export ENCRYPTION_KEY="your_base64_encryption_key_here"
+
+# 3. Run the sample client
+bun sample-client.ts
+```
+
+The sample script demonstrates:
+- Getting an available key with decryption
+- Reporting errors (triggers cooldown)
+- Handling `NoKeysAvailableError` when keys are on cooldown
+- Using the `withKey` convenience wrapper
+- Handling invalid service key rejection
+
+### Error Handling
+
+```typescript
+import { ApiKeyClient, NoKeysAvailableError, ApiKeyError } from '@api_rotate/client';
+
+try {
+  const { key, keyId } = await client.getKey({ type: 'openai' });
+  // Use the key...
+} catch (error) {
+  if (error instanceof NoKeysAvailableError) {
+    // All keys are on cooldown - wait and retry
+    console.log('No keys available, retrying later...');
+  } else if (error instanceof ApiKeyError) {
+    // API error (invalid service key, server error, etc.)
+    console.error(`API Error: ${error.message} (code: ${error.code})`);
+  }
+}
 ```
 
 ## API Endpoints
