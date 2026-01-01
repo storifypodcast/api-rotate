@@ -19,9 +19,12 @@ FROM oven/bun:1.1.38 AS build
 WORKDIR /app
 ENV NODE_ENV="production"
 
-# Copy dependencies and source
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+# Copy entire deps output (includes all workspace node_modules with proper symlinks)
+COPY --from=deps /app ./
+# Copy source code on top
+COPY apps/server/src ./apps/server/src
+COPY apps/server/tsconfig.json ./apps/server/tsconfig.json
+COPY packages/ ./packages/
 
 # Build the server binary
 RUN cd apps/server && \
