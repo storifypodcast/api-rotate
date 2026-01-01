@@ -33,6 +33,19 @@ export class NoKeysAvailableError extends ApiKeyError {
 }
 
 /**
+ * Error thrown when decryption fails (wrong encryption key)
+ */
+export class DecryptionError extends Error {
+  constructor(
+    message = "Failed to decrypt key. This usually means you are using the wrong encryption key.",
+    public readonly keyId?: string,
+  ) {
+    super(message);
+    this.name = "DecryptionError";
+  }
+}
+
+/**
  * API Key Rotation Client
  *
  * A TypeScript client for managing API key rotation with zero-knowledge encryption.
@@ -108,10 +121,18 @@ export class ApiKeyClient {
     }
 
     // Decrypt the key locally
-    const decryptedKey = await decrypt(
-      data.data.encryptedKey,
-      this.config.encryptionKey,
-    );
+    let decryptedKey: string;
+    try {
+      decryptedKey = await decrypt(
+        data.data.encryptedKey,
+        this.config.encryptionKey,
+      );
+    } catch {
+      throw new DecryptionError(
+        `Failed to decrypt key "${data.data.keyId}". This usually means you are using the wrong encryption key, or the key was encrypted with a different key.`,
+        data.data.keyId,
+      );
+    }
 
     return {
       keyId: data.data.keyId,

@@ -26,6 +26,10 @@ export const apiKey = pgTable(
     encryptedKey: text("encrypted_key").notNull(), // AES-GCM encrypted, base64 encoded
     type: text("type"), // Optional categorization (e.g., "openai", "anthropic", "gemini")
 
+    // Encryption key fingerprint (SHA-256 hash of the encryption key used)
+    // Null for legacy keys created before fingerprinting was added
+    keyFingerprint: text("key_fingerprint"),
+
     // Rate limiting
     defaultCooldown: integer("default_cooldown").notNull().default(30), // Per-key default cooldown in seconds
 

@@ -3,6 +3,7 @@ export interface ApiKeyData {
   name: string;
   encryptedKey: string;
   type: string | null;
+  keyFingerprint: string | null;
   defaultCooldown: number;
   isActive: boolean;
   availableAt: string;

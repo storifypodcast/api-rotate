@@ -197,6 +197,7 @@ export class KeyService {
         userId: apiKey.userId,
         name: apiKey.name,
         type: apiKey.type,
+        keyFingerprint: apiKey.keyFingerprint,
         defaultCooldown: apiKey.defaultCooldown,
         isActive: apiKey.isActive,
         availableAt: apiKey.availableAt,
@@ -223,6 +224,23 @@ export class KeyService {
       .returning();
 
     return result.length > 0;
+  }
+
+  /**
+   * Get fingerprints for all keys (for validation)
+   */
+  async getKeyFingerprints(
+    userId: string,
+  ): Promise<{ id: string; keyFingerprint: string | null }[]> {
+    const keys = await db.query.apiKey.findMany({
+      columns: {
+        id: true,
+        keyFingerprint: true,
+      },
+      where: eq(apiKey.userId, userId),
+    });
+
+    return keys;
   }
 }
 

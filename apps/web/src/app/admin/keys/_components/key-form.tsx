@@ -24,7 +24,7 @@ interface KeyFormProps {
 }
 
 export function KeyForm({ onKeyCreated }: KeyFormProps) {
-  const { encryptValue } = useEncryption();
+  const { encryptValue, currentFingerprint } = useEncryption();
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -54,6 +54,7 @@ export function KeyForm({ onKeyCreated }: KeyFormProps) {
           encryptedKey,
           type: type.trim() || null,
           defaultCooldown: parseInt(defaultCooldown, 10) || 30,
+          keyFingerprint: currentFingerprint,
         }),
       });
 

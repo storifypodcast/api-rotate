@@ -4,6 +4,7 @@ import { authMiddleware, serviceAuthMiddleware } from "~/libs/middlewares";
 
 import { createKey } from "./create";
 import { deleteKey } from "./delete";
+import { getFingerprints } from "./fingerprints";
 import { getNextKey } from "./get-next";
 import { getRandomKey } from "./get-random";
 import { listKeys } from "./list";
@@ -21,6 +22,7 @@ keysRouter.post("/report-error", serviceAuthMiddleware, reportError);
 // Admin routes (for web UI - requires Better Auth session)
 keysRouter.get("/", authMiddleware, listKeys);
 keysRouter.get("/stats", authMiddleware, getStats);
+keysRouter.get("/fingerprints", authMiddleware, getFingerprints);
 keysRouter.post("/", authMiddleware, createKey);
 keysRouter.patch("/:id", authMiddleware, updateKey);
 keysRouter.delete("/:id", authMiddleware, deleteKey);

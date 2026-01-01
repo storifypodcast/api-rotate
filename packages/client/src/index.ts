@@ -1,4 +1,4 @@
-export { ApiKeyClient, ApiKeyError, NoKeysAvailableError } from "./client";
+export { ApiKeyClient, ApiKeyError, DecryptionError, NoKeysAvailableError } from "./client";
 export type {
   ApiKeyClientConfig,
   ApiResponse,
