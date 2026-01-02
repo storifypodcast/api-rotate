@@ -47,8 +47,8 @@ ENV NODE_ENV=production
 COPY --from=build --chown=node:node /app ./
 
 USER node
-EXPOSE 3000
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+#EXPOSE 3000
+#ENV PORT=3000
+#ENV HOSTNAME="0.0.0.0"
 
 CMD ["pnpm", "-F", "@api_rotate/web", "start"]
