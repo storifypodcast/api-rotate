@@ -43,6 +43,11 @@ FROM base AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
+# Install curl for health checks
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 # Copy built application with correct ownership
 COPY --from=build --chown=node:node /app ./
 
@@ -50,5 +55,9 @@ USER node
 #EXPOSE 3000
 #ENV PORT=3000
 #ENV HOSTNAME="0.0.0.0"
+
+# Health check for Swarm to verify container is ready
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:3000 || exit 1
 
 CMD ["pnpm", "-F", "@api_rotate/web", "start"]

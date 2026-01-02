@@ -33,9 +33,9 @@ RUN cd apps/server && \
 # Stage 3: Runtime
 FROM debian:bullseye-slim AS runtime
 
-# Install wget for healthcheck
+# Install curl for healthcheck
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends wget ca-certificates && \
+    apt-get install -y --no-install-recommends curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy compiled server binary
@@ -57,4 +57,9 @@ USER 1000:1000
 WORKDIR /
 ENV PORT=3001
 #EXPOSE 3001
+
+# Health check for Swarm to verify container is ready
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:3001/v1/health || exit 1
+
 ENTRYPOINT ["/bin/server"]
