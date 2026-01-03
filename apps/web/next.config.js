@@ -3,10 +3,16 @@ import { createJiti } from "jiti";
 const jiti = createJiti(import.meta.url);
 
 // Import env files to validate at build time. Use jiti so we can load .ts files in here.
-await jiti.import("./src/env");
+// Skip during Docker builds where env vars are only available at runtime
+if (!process.env.SKIP_ENV_VALIDATION) {
+  await jiti.import("./src/env");
+}
 
 /** @type {import("next").NextConfig} */
 const config = {
+  /** Standalone output for optimized Docker builds */
+  output: "standalone",
+
   /** Enables hot reloading for local packages without a build step */
   transpilePackages: [
     "@api_rotate/api",

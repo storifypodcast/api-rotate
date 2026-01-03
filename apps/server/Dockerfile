@@ -6,9 +6,13 @@ FROM node:22-slim AS deps
 WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable
 
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+# Copy package.json first to read pnpm version from packageManager field
+COPY package.json ./
+RUN corepack install
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/ ./packages/
 COPY apps/server/package.json ./apps/server/
 COPY tooling/ ./tooling/

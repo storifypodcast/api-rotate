@@ -1,63 +1,82 @@
 # syntax=docker/dockerfile:1.11
-# API Rotate Web - Next.js
+# API Rotate Web - Next.js (Optimized)
 
+# ============================================
+# Base stage - common setup
+# ============================================
 FROM node:22-slim AS base
 WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Enable corepack (pnpm version read from package.json packageManager field)
+RUN corepack enable
 
-# Stage 1: Install dependencies
+# ============================================
+# Dependencies stage - install all deps
+# ============================================
 FROM base AS deps
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+
+# Copy package.json first to read pnpm version from packageManager field
+COPY package.json ./
+RUN corepack install
+
+# Copy lockfiles and workspace config
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/ ./packages/
 COPY apps/ ./apps/
 COPY tooling/ ./tooling/
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
-# Stage 2: Build
+# Install dependencies with cache mount (--ignore-scripts skips postinstall sherif check)
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
+
+# ============================================
+# Build stage - build the application
+# ============================================
 FROM base AS build
 WORKDIR /app
 ENV NODE_ENV=production
 ENV SKIP_ENV_VALIDATION=true
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# # Build-time environment variables (placeholder values for build)
-# ENV DATABASE_URL="postgresql://placeholder:placeholder@placeholder:5432/placeholder"
-# ENV AUTH_SECRET="placeholder-secret-for-build-time-only-min32"
-# ENV BETTER_AUTH_SECRET="placeholder-secret-for-build-time-only-min32"
-# ENV BETTER_AUTH_URL="http://localhost:3000"
+# Copy package.json and install correct pnpm version
+COPY package.json ./
+RUN corepack install
 
 # Copy everything from deps (including node_modules)
 COPY --from=deps /app ./
 
-# Build the packages first, then web (run next build directly, not with-env)
+# Build packages first, then web with standalone output
 RUN pnpm -F @api_rotate/db build && \
     pnpm -F @api_rotate/crypto build && \
     cd apps/web && pnpm next build
 
-# Fix permissions for node user
-RUN chown -R node:node /app
-
-# Stage 3: Runtime
-FROM base AS runtime
+# ============================================
+# Runtime stage - minimal production image
+# ============================================
+FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Install curl for health checks
+# Install curl for health checks and create non-root user
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
-# Copy built application with correct ownership
-COPY --from=build --chown=node:node /app ./
+# Copy standalone build (includes only needed node_modules)
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+# Copy static assets
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
-USER node
-#EXPOSE 3000
-#ENV PORT=3000
-#ENV HOSTNAME="0.0.0.0"
+USER nextjs
 
-# Health check for Swarm to verify container is ready
+ENV HOSTNAME="0.0.0.0"
+
+# Health check for Swarm
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:3000 || exit 1
 
-CMD ["pnpm", "-F", "@api_rotate/web", "start"]
+# Run standalone server directly (reads env vars at runtime)
+CMD ["node", "apps/web/server.js"]
